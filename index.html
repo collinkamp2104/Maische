@@ -7,7 +7,6 @@
 <style>
 :root{color-scheme:dark;--bg:#0a0c18;--side:#0d1021;--card:#11152a;--card2:#161b34;--line:#222844;--fg:#eaecf6;--mut:#8a92b2;--acc:#6d5efc;--acc2:#9a8cff;--ok:#33d17a;--warn:#f5a524;--bad:#ff5c72;--info:#4aa3ff;--r:12px}
 *{box-sizing:border-box}
-[hidden]{display:none!important}
 html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 button,input,select{font:inherit;color:inherit}
 a{color:var(--acc2)}
@@ -64,8 +63,7 @@ th{color:var(--mut);font-weight:500;font-size:12px;text-transform:uppercase;lett
 td{padding:9px 8px;border-top:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
 tr.row{cursor:pointer}tr.row:hover td{background:rgba(109,94,252,.07)}tr.sel td{background:rgba(109,94,252,.13)}
 .tk{display:flex;gap:10px;align-items:center}
-.av{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none;color:#fff;overflow:hidden}
-.av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:var(--card2)}
+.av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;flex:none;color:#fff;overflow:hidden}
 .tk b{display:block;max-width:150px;overflow:hidden;text-overflow:ellipsis}.tk span{color:var(--mut);font-size:12px}
 .tag{display:inline-block;min-width:48px;text-align:center;padding:2px 8px;border-radius:6px;border:1px solid;font-size:12px;font-weight:600}
 .tag.ok{color:var(--ok);border-color:var(--ok);background:rgba(51,209,122,.08)}
@@ -89,7 +87,7 @@ tr.row{cursor:pointer}tr.row:hover td{background:rgba(109,94,252,.07)}tr.sel td{
 .chk .s{flex:none;font-weight:700}
 .kv{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px}.kv span:first-child{color:var(--mut)}
 .thead{display:flex;gap:12px;align-items:center;margin-bottom:10px}
-.thead .av{width:56px;height:56px;font-size:20px}
+.thead .av{width:46px;height:46px;font-size:18px}
 .addr{font-size:12px;color:var(--mut);word-break:break-all}
 .row2{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 canvas{width:100%;height:230px;display:block}
@@ -129,7 +127,7 @@ canvas{width:100%;height:230px;display:block}
     <div class="brand"><div class="logo">1K</div><div><b>1000X SCOUT</b><span>Solana Meme Coin Scanner</span></div></div>
     <nav class="menu" id="menu"></nav>
     <div style="flex:1" class="box" hidden></div>
-    <div class="box"><h4>Datenverbindung</h4><div class="st"><span id="netTxt"><i></i>wartet</span></div></div>
+    <div class="box"><h4>Solana Network</h4><div class="st"><span id="netTxt"><i></i>wartet</span></div></div>
     <div class="box"><h4>API Status</h4><div id="apis"></div></div>
   </aside>
   <div class="main">
@@ -231,7 +229,7 @@ function norm(p) {
     price: +p.priceUsd || null, mcap: +p.marketCap || null, fdv: +p.fdv || null, liq: p.liquidity ? +p.liquidity.usd || 0 : null,
     v5: +v.m5 || 0, v1: +v.h1 || 0, buys5: (tx.m5 || {}).buys ?? null, sells5: (tx.m5 || {}).sells ?? null,
     buys1: (tx.h1 || {}).buys ?? null, sells1: (tx.h1 || {}).sells ?? null, ch5: c.m5 ?? null, ch1: c.h1 ?? null,
-    img: /^https:\/\/cdn\.dexscreener\.com\//.test(info.imageUrl || "") ? info.imageUrl : null, created: p.pairCreatedAt ? p.pairCreatedAt / 1000 : null, web: !!(info.websites || []).length, tw: soc.has("twitter"), tgm: soc.has("telegram"),
+    created: p.pairCreatedAt ? p.pairCreatedAt / 1000 : null, web: !!(info.websites || []).length, tw: soc.has("twitter"), tgm: soc.has("telegram"),
   };
 }
 const newTk = (m) => ({ mint: m, s: null, prev: null, hist: [], rc: null, rcState: "idle", rcAt: 0, sell: null, a: null, streak: 0, first: Date.now(), keep: false });
@@ -454,7 +452,7 @@ async function refresh() {
     const mints = [...S.tokens.keys()]; let okBatch = false;
     for (let i = 0; i < mints.length; i += 30) { try { ingest(await jget("DexScreener", DEX + "/tokens/v1/solana/" + mints.slice(i, i + 30).join(",")), { hist: true }); okBatch = true; } catch {} }
     if (!okDisc && !okBatch) S.err = "Keine Verbindung zu DexScreener. Prüfe Internet, Werbeblocker/VPN oder öffne die Seite über https://.";
-    prune(); analyzeAll(); await enrich(); analyzeAll(); detectEvents(); await detectSignals(); updateOutcomes();
+    prune(); analyzeAll(); await Promise.all([enrich(), probeRpc()]); analyzeAll(); detectEvents(); await detectSignals(); updateOutcomes();
     const act = [...S.tokens.values()].filter((t) => t.s && (t.s.liq || 0) >= 5000);
     if (act.length) { S.chart.push({ t: Date.now(), mc: act.reduce((a, t) => a + (t.s.mcap || t.s.fdv || 0), 0), v: act.reduce((a, t) => a + (t.s.v5 || 0), 0) }); if (S.chart.length > 180) S.chart.shift(); }
     if (!S.sel || !S.tokens.has(S.sel)) { const top = ranked()[0]; S.sel = top ? top.mint : null; }
@@ -482,11 +480,7 @@ function filtered({ limit = 100, order = "score" } = {}) {
 }
 
 /* ============ UI-Bausteine ============ */
-function avatar(s) {
-  const hh = hue(s.symbol || s.mint || "?"), box = h("div", { class: "av", style: "background:hsl(" + hh + " 55% 42%)" }, (s.symbol || "?").slice(0, 1).toUpperCase());
-  if (s.img) { const im = h("img", { src: s.img, alt: "", loading: "lazy", referrerpolicy: "no-referrer", on: { error: () => im.remove() } }); box.append(im); }
-  return box;
-}
+function avatar(s, big) { const hh = hue(s.symbol || s.mint || "?"); return h("div", { class: "av", style: "background:hsl(" + hh + " 55% 42%)" }, (s.symbol || "?").slice(0, 1).toUpperCase()); }
 function spark(tk) {
   const pts = tk.hist.map((x) => x.p).filter(Boolean).slice(-24); const ns = "http://www.w3.org/2000/svg";
   const svg = document.createElementNS(ns, "svg"); svg.setAttribute("width", 64); svg.setAttribute("height", 22); svg.setAttribute("class", "spark");
@@ -672,9 +666,9 @@ function renderChrome() {
   const menu = $("#menu"); menu.replaceChildren(...Object.entries(VIEWS).map(([k, [l, ic]]) => h("button", { class: S.view === k ? "on" : "", on: { click: () => go(k) } }, svgIcon(ic), l)));
   $("#modes").replaceChildren(h("button", { class: S.mode === "analyse" ? "on" : "", on: { click: () => { S.mode = "analyse"; store.set("mode", S.mode); render(); } } }, "Analysemodus"), h("button", { class: S.mode === "trade" ? "on" : "", on: { click: () => { S.mode = "trade"; store.set("mode", S.mode); render(); } } }, "Trading (echt)"));
   const live = $("#live"), off = S.err || !S.last; live.className = "pill" + (off && !S.busy ? " off" : ""); live.lastChild.textContent = S.busy ? "AKTUALISIERT …" : off ? "OFFLINE" : "LIVE SCANNING";
-  const names = [["DexScreener", "DexScreener"], ["RugCheck", "RugCheck"], ["Jupiter", "Jupiter"]];
+  const names = [["DexScreener", "DexScreener"], ["RugCheck", "RugCheck"], ["Jupiter", "Jupiter"], ["Solana RPC", "Solana RPC"]];
   $("#apis").replaceChildren(...names.map(([k, l]) => { const st = S.health[k]; return h("div", { class: "st" }, h("span", {}, h("i", { class: st ? (st.ok ? "ok" : "bad") : "" }), l), h("span", { class: st ? (st.ok ? "ok" : "bad") : "mut" }, st ? (st.ok ? "Online" : "Fehler") : "wartet")); }));
-  { const d = S.health.DexScreener, c = !d ? "var(--mut)" : d.ok ? "var(--ok)" : "var(--bad)"; $("#netTxt").replaceChildren(h("i", { style: "width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px;background:" + c }), !d ? "wartet" : d.ok ? "Online" : "nicht erreichbar"); }
+  $("#netTxt").replaceChildren(h("i", { class: S.rpcOk == null ? "" : S.rpcOk ? "ok" : "bad", style: "width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px;background:" + (S.rpcOk == null ? "var(--mut)" : S.rpcOk ? "var(--ok)" : "var(--bad)") }), S.rpcOk == null ? "wartet" : S.rpcOk ? "Online" : "nicht erreichbar");
   const b = $("#bellN"); b.hidden = !S.unseen; b.textContent = S.unseen;
   $("#upd").textContent = "Letzte Aktualisierung: " + (S.last ? new Date(S.last).toLocaleTimeString("de-DE") : "–");
   $("#title").textContent = VIEWS[S.view][0] === "Übersicht" ? "Meme Coin Radar" : VIEWS[S.view][0];
